@@ -1,4 +1,4 @@
-const ZERO: &str = r"
+pub const ZERO: &str = r"
  $$$$$$\  
 $$$ __$$\ 
 $$$$\ $$ |
@@ -9,7 +9,7 @@ $$ |\$$$ |
  \______/ 
 ";
 
-const ONE: &str = r"
+pub const ONE: &str = r"
   $$\   
 $$$$ |  
 \_$$ |  
@@ -20,7 +20,7 @@ $$$$$$\
 \______|
 ";
 
-const TWO: &str = r"
+pub const TWO: &str = r"
  $$$$$$\  
 $$  __$$\ 
 \__/  $$ |
@@ -31,7 +31,7 @@ $$$$$$$$\
 \________|
 ";
 
-const THREE: &str = r"
+pub const THREE: &str = r"
  $$$$$$\  
 $$ ___$$\ 
 \_/   $$ |
@@ -42,7 +42,7 @@ $$\   $$ |
  \______/ 
 ";
 
-const FOUR: &str = r"
+pub const FOUR: &str = r"
 $$\   $$\ 
 $$ |  $$ |
 $$ |  $$ |
@@ -53,7 +53,7 @@ $$$$$$$$ |
       \__|
 ";
 
-const FIVE: &str = r"
+pub const FIVE: &str = r"
 $$$$$$$\  
 $$  ____| 
 $$ |      
@@ -64,7 +64,7 @@ $$\   $$ |
  \______/ 
 ";
 
-const SIX: &str = r"
+pub const SIX: &str = r"
  $$$$$$\  
 $$  __$$\ 
 $$ /  \__|
@@ -75,7 +75,7 @@ $$ /  $$ |
  \______/ 
 ";
 
-const SEVEN: &str = r"
+pub const SEVEN: &str = r"
 $$$$$$$$\ 
 \____$$  |
     $$  / 
@@ -86,7 +86,7 @@ $$  /
 \__/      
 ";
 
-const EIGHT: &str = r"
+pub const EIGHT: &str = r"
  $$$$$$\  
 $$  __$$\ 
 $$ /  $$ |
@@ -97,7 +97,7 @@ $$ /  $$ |
  \______/ 
 ";
 
-const NINE: &str = r"
+pub const NINE: &str = r"
  $$$$$$\  
 $$  __$$\ 
 $$ /  $$ |
@@ -108,7 +108,7 @@ $$\   $$ |
  \______/ 
 ";
 
-pub const colon: &str = r"
+pub const COLON: &str = r"
     
     
 $$\ 
