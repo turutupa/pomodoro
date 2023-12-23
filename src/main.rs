@@ -33,7 +33,7 @@ fn get_duration(prompt: &str, default: u32) -> u32 {
 }
 
 fn clear_term() {
-    print!("{esc}[2J{esc}[H", esc = 27 as char); // clear term
+    print!("{esc}[2J{esc}[H{esc}[48;5;234m", esc = 27 as char);
 }
 
 fn print_pomodoro_count(minutes: u32, seconds: u32, term_width: usize) {
@@ -62,6 +62,7 @@ fn print_pomodoro_count(minutes: u32, seconds: u32, term_width: usize) {
             }
         };
     }
+    ascii_time = center_ascii(&ascii_time, term_width);
     println!("{}", ascii_time);
     println!();
 }
@@ -84,8 +85,6 @@ fn append_number(ascii_time: &mut String, number: &str) {
     }
 
     new_line_width += padding;
-    time_lines_width += padding;
-
     for i in 0..max_lines {
         let time_line = time_lines.get(i).unwrap_or(&"");
         let new_line = new_lines.get(i).unwrap_or(&"");
@@ -101,22 +100,38 @@ fn append_number(ascii_time: &mut String, number: &str) {
     *ascii_time = result.trim_end().to_owned(); // Trim trailing whitespace
 }
 
+fn center_ascii(ascii_time: &str, term_width: usize) -> String {
+    let mut centered_ascii = String::new();
+    let max_line_width = ascii_time.lines().map(|line| line.len()).max().unwrap_or(0);
+    for line in ascii_time.lines() {
+        // Calculate consistent padding for each line
+        let padding = (term_width - max_line_width) / 2;
+        let centered_line = format!("{:width$}", "", width = padding);
+        centered_ascii.push_str(&centered_line);
+        centered_ascii.push_str(line);
+        centered_ascii.push('\n');
+    }
+    centered_ascii
+}
+
 fn countdown_timer(phase: &str, duration_mins: u32) {
     let total_seconds = duration_mins * 60;
-    let (term_width, _) = dimensions().unwrap_or((80, 24));
+    let (term_width, term_height) = dimensions().unwrap_or((80, 24));
+    let title_padding = (term_width - phase.len()) / 2;
+    let vertical_padding = (term_height - 4) / 3; // Adjust the number to control vertical padding
 
     for remaining_seconds in 0..total_seconds {
         clear_term();
         let minutes = (remaining_seconds % 3600) / 60;
         let seconds = remaining_seconds % 60;
 
-        let title_padding = (term_width - phase.len()) / 2;
-        println!("{:-^width$}", "", width = term_width);
+        for _ in 0..vertical_padding {
+            println!();
+        }
         for _ in 0..title_padding {
             print!(" ");
         }
         println!("{}", phase);
-        println!("{:-^width$}", "", width = term_width);
         print_pomodoro_count(minutes, seconds, term_width);
 
         thread::sleep(Duration::from_secs(1));
