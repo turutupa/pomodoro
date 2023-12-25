@@ -1,6 +1,7 @@
 mod ascii;
 
 use ascii::{COLON, EIGHT, FIVE, FOUR, NINE, ONE, SEVEN, SIX, THREE, TWO, ZERO};
+use ctrlc;
 use inquire::Text;
 use std::process;
 use std::thread;
@@ -9,16 +10,28 @@ use term_size::dimensions;
 
 const DEFAULT_POMODORO_DURATION_MIN: u32 = 25;
 const DEFAULT_BREAK_DURATION_MIN: u32 = 5;
+const CATPPUCCIN_BACKGROUND: &str = "#1e1e2e";
+const CATPPUCCIN_FOREGROUND: &str = "#CBA6F7";
 
 fn main() {
+    set_background_color(CATPPUCCIN_BACKGROUND);
+
+    let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, std::sync::atomic::Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl+C handler");
+
     clear_term();
+    hide_cursor();
     let pomodoro_duration: u32 = get_duration(
         "Pomodoro duration (minutes)?",
         DEFAULT_POMODORO_DURATION_MIN,
     );
     let break_duration: u32 = get_duration("Break duration (minutes)?", DEFAULT_BREAK_DURATION_MIN);
-    countdown_timer("Work time!", pomodoro_duration);
-    countdown_timer("Break", break_duration);
+    countdown_timer("Work time!", pomodoro_duration, &running);
+    countdown_timer("Break", break_duration, &running);
 }
 
 fn get_duration(prompt: &str, default: u32) -> u32 {
@@ -32,11 +45,35 @@ fn get_duration(prompt: &str, default: u32) -> u32 {
     }
 }
 
-fn clear_term() {
-    print!("{esc}[2J{esc}[H{esc}[48;5;234m", esc = 27 as char);
+fn hide_cursor() {
+    print!("{esc}[?25l", esc = 27 as char);
 }
 
-fn print_pomodoro_count(minutes: u32, seconds: u32, term_width: usize) {
+fn show_cursor() {
+    print!("{esc}[?25h", esc = 27 as char);
+}
+
+fn clear_term() {
+    print!("{esc}[2J{esc}[H", esc = 27 as char);
+}
+
+fn set_background_color(hex_color: &str) {
+    let ansi_color_code = hex_to_ansi(hex_color);
+    print!(
+        "{esc}[48;5;{code}m",
+        esc = 27 as char,
+        code = ansi_color_code
+    );
+}
+
+fn hex_to_ansi(hex_color: &str) -> String {
+    let red = u8::from_str_radix(&hex_color[1..3], 16).unwrap();
+    let green = u8::from_str_radix(&hex_color[3..5], 16).unwrap();
+    let blue = u8::from_str_radix(&hex_color[5..7], 16).unwrap();
+    format!("\x1b[38;2;{};{};{}m", red, green, blue)
+}
+
+fn get_time(minutes: u32, seconds: u32, term_width: usize) -> String {
     let timer = format!("{:02}:{:02}", minutes, seconds);
     let padding = (term_width - timer.len()) / 2;
     for _ in 0..padding {
@@ -62,9 +99,7 @@ fn print_pomodoro_count(minutes: u32, seconds: u32, term_width: usize) {
             }
         };
     }
-    ascii_time = center_ascii(&ascii_time, term_width);
-    println!("{}", ascii_time);
-    println!();
+    return center_ascii(&ascii_time, term_width);
 }
 
 fn append_number(ascii_time: &mut String, number: &str) {
@@ -114,26 +149,70 @@ fn center_ascii(ascii_time: &str, term_width: usize) -> String {
     centered_ascii
 }
 
-fn countdown_timer(phase: &str, duration_mins: u32) {
+fn countdown_timer(
+    title: &str,
+    duration_mins: u32,
+    running: &std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
     let total_seconds = duration_mins * 60;
     let (term_width, term_height) = dimensions().unwrap_or((80, 24));
-    let title_padding = (term_width - phase.len()) / 2;
-    let vertical_padding = (term_height - 4) / 3; // Adjust the number to control vertical padding
+    let print = printer(CATPPUCCIN_FOREGROUND.to_owned());
+
+    let centered_title = center_text(title, term_width, term_height);
+    let centered_title_lines: Vec<&str> = centered_title.lines().collect(); // Split into lines
 
     for remaining_seconds in 0..total_seconds {
         clear_term();
+        if !running.load(std::sync::atomic::Ordering::SeqCst) {
+            let exit_text = center_text("Good job! See you soon!", term_width, term_height);
+            print(exit_text);
+            thread::sleep(Duration::from_secs(1));
+            clear_term();
+            show_cursor();
+            break;
+        }
         let minutes = (remaining_seconds % 3600) / 60;
         let seconds = remaining_seconds % 60;
-
-        for _ in 0..vertical_padding {
-            println!();
-        }
-        for _ in 0..title_padding {
-            print!(" ");
-        }
-        println!("{}", phase);
-        print_pomodoro_count(minutes, seconds, term_width);
+        let time: String = get_time(minutes, seconds, term_width);
+        print(centered_title.to_string());
+        print(time);
 
         thread::sleep(Duration::from_secs(1));
     }
+}
+
+fn printer(color: String) -> impl Fn(String) {
+    move |text: String| {
+        if text.is_empty() {
+            println!();
+            return;
+        }
+
+        let hex_color = hex_to_ansi(&color);
+        print!("{}", hex_color);
+
+        for line in text.lines() {
+            if line.is_empty() {
+                println!();
+            } else {
+                let formatted_line = format!("{}\x1b[0m", line);
+                println!("{}", formatted_line);
+            }
+        }
+    }
+}
+
+fn center_text(title: &str, term_width: usize, term_height: usize) -> String {
+    let horizontal_padding = (term_width - title.len()) / 2;
+    let vertical_padding = (term_height - 4) / 3; // Adjust the number to control vertical padding
+    let mut padded_title = String::new();
+
+    for _ in 0..vertical_padding {
+        padded_title.push('\n');
+    }
+    for _ in 0..horizontal_padding {
+        padded_title.push(' ');
+    }
+    padded_title.push_str(title);
+    padded_title
 }

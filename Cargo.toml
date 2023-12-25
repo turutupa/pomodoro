@@ -9,3 +9,5 @@ edition = "2021"
 inquire = "0.6.2"
 termion = "1.5.6"
 term_size = "0.3.1"
+ctrlc = "3.3.0"
+
